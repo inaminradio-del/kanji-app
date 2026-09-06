@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>となえてかく かんじ　1〜6年生</title>
+<script src="data/grade1.js"></script>
+<script src="data/grade2.js"></script>
+<script src="data/grade3.js"></script>
+<script src="data/grade4.js"></script>
+<script src="data/grade5.js"></script>
+<script src="data/grade6.js"></script>
+<script src="data/strokes.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=Shippori+Mincho:wght@600&family=Yuji+Syuku&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F7F1E3; --paper-line:#D8CBB0;
+    --sumi:#2E2B27; --sumi-soft:#5A5348;
+    --hanko:#C0392B; --guide:#8FA6A0; --gold:#C9A24B;
+    --g1:#D9695F; --g2:#DB8A3D; --g3:#96A83A; --g4:#4F9E7C; --g5:#4478A6; --g6:#8863A6;
+    --accent: var(--g1);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--paper);
+    background-image:
+      linear-gradient(var(--paper-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--paper-line) 1px, transparent 1px);
+    background-size: 34px 34px;
+    color:var(--sumi); font-family:'Zen Maru Gothic', sans-serif;
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+    padding:24px 16px 60px;
+  }
+  .titlewrap{ text-align:center; margin-bottom:6px; }
+  .titlewrap .kicker{ font-size:13px; letter-spacing:0.15em; color:var(--sumi-soft); margin-bottom:4px; }
+  .titlewrap h1{
+    font-family:'Shippori Mincho', serif; font-size:clamp(18px,5vw,24px); margin:0; font-weight:600;
+    display:flex; align-items:center; justify-content:center; gap:10px; white-space:nowrap;
+    transition:color .2s;
+  }
+  .titlewrap h1::before, .titlewrap h1::after{ content:''; width:26px; height:1px; background:var(--accent); transition:background .2s; }
+  @media (max-width:420px){
+    .titlewrap h1::before, .titlewrap h1::after{ width:14px; }
+    .titlewrap h1{ gap:6px; }
+  }
+
+  /* --- 学年タブ --- */
+  .gradeTabs{
+    display:flex; gap:6px; flex-wrap:wrap; justify-content:center;
+    margin: 12px 0 6px; max-width:640px;
+  }
+  .gradeTab{
+    font-family:'Zen Maru Gothic', sans-serif; font-weight:700; font-size:14px;
+    border:2px solid var(--gc); color:var(--gc); background:#fffdf8;
+    padding:8px 15px; border-radius:999px; cursor:pointer; transition: all .15s;
+  }
+  .gradeTab:hover{ filter:brightness(0.95); }
+  .gradeTab.active{ background:var(--gc); color:#fff; box-shadow:0 2px 0 rgba(0,0,0,.08); }
+  .gradeTab[data-g="1"]{ --gc: var(--g1); }
+  .gradeTab[data-g="2"]{ --gc: var(--g2); }
+  .gradeTab[data-g="3"]{ --gc: var(--g3); }
+  .gradeTab[data-g="4"]{ --gc: var(--g4); }
+  .gradeTab[data-g="5"]{ --gc: var(--g5); }
+  .gradeTab[data-g="6"]{ --gc: var(--g6); }
+
+  /* --- ナビゲーション --- */
+  .nav{
+    display:flex; align-items:center; gap:10px;
+    margin: 6px 0 18px;
+    flex-wrap:wrap; justify-content:center;
+  }
+  .nav button.arrow{
+    width:38px; height:38px; border-radius:50%; flex-shrink:0;
+    border:2px solid var(--accent); background:var(--paper); color:var(--accent);
+    font-size:16px; font-weight:700; cursor:pointer; transition: all .2s;
+  }
+  .nav select{
+    font-family:'Zen Maru Gothic', sans-serif;
+    font-size:15px; font-weight:700;
+    border:2px solid var(--sumi); border-radius:10px;
+    background:#fffdf8; color:var(--sumi);
+    padding:8px 12px; max-width:220px;
+  }
+  .progress{
+    font-size:12px; color:var(--sumi-soft); text-align:center; margin-bottom:8px;
+  }
+
+  .stage{
+    width:100%; max-width:900px;
+    display:grid; grid-template-columns: 1fr 1.15fr; gap:34px; align-items:start;
+  }
+  @media (max-width:720px){ .stage{grid-template-columns:1fr;} }
+
+  .info{ padding-top:6px; }
+  .phrase-box{
+    background:#fffdf8; border:1.5px solid var(--sumi); border-radius:14px;
+    padding:18px 20px; margin-bottom:20px; position:relative;
+  }
+  .phrase-box .label{
+    position:absolute; top:-11px; left:16px;
+    background:var(--sumi); color:var(--paper);
+    font-size:12px; padding:2px 10px; border-radius:999px; letter-spacing:.05em;
+  }
+  .phrase-box .allplay{
+    position:absolute; top:-14px; right:14px;
+    background:var(--hanko); color:#fff; border:none;
+    font-size:12px; font-weight:700; padding:5px 12px; border-radius:999px; cursor:pointer;
+  }
+  .phrase-line{
+    display:flex; align-items:center; gap:10px;
+    font-size:18px; font-weight:700; line-height:1.7; color:var(--hanko);
+    padding:5px 0; border-bottom:1px dashed var(--paper-line);
+  }
+  .phrase-line:last-child{ border-bottom:none; }
+  .phrase-line b{ font-size:14px; color:var(--sumi-soft); font-weight:500; min-width:1.6em; }
+  .phrase-line .txt{ flex:1; }
+  .speak-btn{
+    border:1.5px solid var(--sumi-soft); background:#fff;
+    width:30px; height:30px; border-radius:50%;
+    cursor:pointer; font-size:14px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    transition: background .15s;
+  }
+  .speak-btn.playing{ background:var(--gold); border-color:var(--gold); }
+
+  .readings{ display:flex; gap:14px; margin-bottom:20px; }
+  .reading-pill{ flex:1; text-align:center; border:1.5px solid var(--sumi); border-radius:10px; padding:10px 8px; }
+  .reading-pill .tag{ font-size:11px; color:#fff; background:var(--sumi-soft); padding:1px 8px; border-radius:999px; }
+  .reading-pill.on .tag{ background:var(--hanko); }
+  .reading-pill .val{ margin-top:6px; font-size:14px; font-weight:700; line-height:1.5; }
+
+  .example{ font-size:15px; line-height:1.9; color:var(--sumi-soft); border-left:3px solid var(--gold); padding-left:12px; }
+  .example .speak-btn{ margin-left:6px; vertical-align:middle; }
+
+  .traceCard{
+    background:#fffdf8; border:1.5px solid var(--sumi); border-radius:16px;
+    padding:20px; display:flex; flex-direction:column; align-items:center;
+  }
+  .modeToggle{ display:flex; gap:8px; margin-bottom:14px; background:var(--paper); border-radius:999px; padding:4px; }
+  .modeToggle button{
+    border:none; background:transparent; font-family:'Zen Maru Gothic', sans-serif;
+    font-weight:700; font-size:13px; padding:7px 16px; border-radius:999px; cursor:pointer; color:var(--sumi-soft);
+  }
+  .modeToggle button.active{ background:var(--accent); color:#fff; transition:background .2s; }
+
+  .gridwrap{
+    position:relative; width:min(280px,84vw); height:min(280px,84vw); aspect-ratio:1/1;
+    background:#fff; border:1.5px solid var(--accent); transition:border-color .2s;
+  }
+  .gridwrap svg{ position:absolute; top:0; left:0; width:100%; height:100%; touch-action:none; cursor:crosshair; }
+  .cross-h, .cross-v{ position:absolute; background:var(--guide); opacity:.55; }
+  .cross-h{ top:50%; left:0; width:100%; height:1px; transform:translateY(-0.5px); }
+  .cross-v{ left:50%; top:0; width:1px; height:100%; transform:translateX(-0.5px); }
+  .diag{
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    background:
+      linear-gradient(to bottom right, transparent calc(50% - 0.5px), var(--guide) 50%, transparent calc(50% + 0.5px)),
+      linear-gradient(to bottom left, transparent calc(50% - 0.5px), var(--guide) 50%, transparent calc(50% + 0.5px));
+    opacity:.35;
+  }
+  .kanjiGuide{
+    font-family:'Yuji Syuku', serif; fill:#B9AF9C; opacity:0.55;
+    pointer-events:none; user-select:none; transition:opacity .12s;
+  }
+  /* KanjiVG（正確な筆順データ）ベースのガイド表示 */
+  .kvgGuide{ pointer-events:none; }
+  .kvgGuide path{
+    fill:none; stroke:#B9AF9C; stroke-width:3; stroke-linecap:round; stroke-linejoin:round;
+    opacity:0.55; transition:opacity .12s;
+  }
+  .kvgPlay path{ fill:none; stroke:var(--hanko); stroke-width:3.4; stroke-linecap:round; stroke-linejoin:round; }
+  .kvgPlay .strokeNumBg{ fill:var(--hanko); }
+  .kvgPlay .strokeNumTx{
+    fill:#fff; font-family:'Zen Maru Gothic', sans-serif; font-weight:700; font-size:6.5px;
+    text-anchor:middle; dominant-baseline:central;
+  }
+  .kvgPlay .penTip{ fill:var(--gold); stroke:#fff; stroke-width:0.6; }
+
+  .playBadge{
+    position:absolute; top:8px; right:8px; z-index:2;
+    background:var(--accent); color:#fff; font-weight:700; font-size:12px;
+    padding:4px 10px; border-radius:999px; opacity:0; transform:translateY(-4px);
+    transition: opacity .15s, transform .15s; pointer-events:none;
+  }
+  .playBadge.show{ opacity:1; transform:translateY(0); }
+
+  .strokeBadge{
+    margin-top:10px; font-size:13px; color:var(--sumi-soft);
+    background:var(--paper); border:1px solid var(--paper-line);
+    border-radius:999px; padding:4px 14px;
+  }
+  .strokeBadge b{ color:var(--hanko); }
+
+  .controls{ display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; justify-content:center; }
+  .controls button{
+    font-family:'Zen Maru Gothic', sans-serif; font-weight:700; font-size:14px;
+    border:1.5px solid var(--sumi); background:var(--paper); color:var(--sumi);
+    padding:9px 16px; border-radius:10px; cursor:pointer;
+  }
+  .controls button.primary{ background:var(--accent); color:#fff; border-color:var(--accent); transition: all .2s; }
+  .controls button.hanko-btn{ background:var(--hanko); color:#fff; border-color:var(--hanko); }
+
+  .msg{ margin-top:12px; font-size:14px; font-weight:700; color:var(--sumi-soft); min-height:20px; text-align:center; }
+  .msg.win{ color:var(--hanko); font-size:16px; }
+  .guideNote{ font-size:12px; color:var(--sumi-soft); margin-top:8px; text-align:center; max-width:260px; }
+  .credit{ font-size:11px; color:var(--sumi-soft); opacity:0.7; margin-top:28px; text-align:center; }
+  .credit a{ color:var(--sumi-soft); }
+</style>
+</head>
+<body>
+
+<div class="titlewrap">
+  <div class="kicker">となえて・きいて・かいて おぼえる</div>
+  <h1 id="pageTitle">1年生の かんじ（ぜんぶ）</h1>
+</div>
+
+<div class="gradeTabs" id="gradeTabs">
+  <button class="gradeTab active" data-g="1">1ねんせい</button>
+  <button class="gradeTab" data-g="2">2ねんせい</button>
+  <button class="gradeTab" data-g="3">3ねんせい</button>
+  <button class="gradeTab" data-g="4">4ねんせい</button>
+  <button class="gradeTab" data-g="5">5ねんせい</button>
+  <button class="gradeTab" data-g="6">6ねんせい</button>
+</div>
+<div class="nav">
+  <button class="arrow" id="prevBtn">◀</button>
+  <select id="kanjiSelect"></select>
+  <button class="arrow" id="nextBtn">▶</button>
+</div>
+<div class="progress" id="progress"></div>
+
+<div class="stage">
+  <div class="info">
+    <div class="phrase-box">
+      <div class="label">となえかた</div>
+      <button class="allplay" id="allPlay">▶ ぜんぶ きく</button>
+      <div id="phraseLines"></div>
+    </div>
+
+    <div class="readings">
+      <div class="reading-pill on">
+        <div class="tag">おん</div>
+        <div class="val" id="onYomi"></div>
+      </div>
+      <div class="reading-pill">
+        <div class="tag">くん</div>
+        <div class="val" id="kunYomi"></div>
+      </div>
+    </div>
+
+    <div class="example" id="exampleBox"></div>
+  </div>
+
+  <div class="traceCard">
+    <div class="modeToggle" id="modeToggle">
+      <button data-m="trace" class="active">見ながら かく</button>
+      <button data-m="free">見ないで かく</button>
+    </div>
+    <div class="gridwrap">
+      <div class="cross-h"></div>
+      <div class="cross-v"></div>
+      <div class="diag"></div>
+      <svg id="svgStage" viewBox="0 0 280 280"></svg>
+      <div class="playBadge" id="playBadge"></div>
+    </div>
+    <div class="strokeBadge" id="strokeBadge"></div>
+    <div class="controls">
+      <button id="btnWatchStroke" class="primary">▶ 書き順を見る</button>
+      <button id="btnPlayStroke">🔊 画数を きく</button>
+      <button id="btnClear">クリア</button>
+      <button id="btnPeek" class="hanko-btn" style="display:none;">ちらっと見る</button>
+      <button id="btnDone" class="primary">かけた！</button>
+    </div>
+    <div class="msg" id="msg"></div>
+    <div class="guideNote" id="guideNote"></div>
+  </div>
+</div>
+
+<div class="credit">書き順データ: <a href="http://kanjivg.tagaini.net" target="_blank" rel="noopener">KanjiVG</a>（CC BY-SA 3.0）</div>
+
+<script>
+// ==== 1〜6年生の漢字データ（data/gradeN.js から読み込み） ====
+const KANJI = Object.assign({}, KANJI_GRADE1, KANJI_GRADE2, KANJI_GRADE3, KANJI_GRADE4, KANJI_GRADE5, KANJI_GRADE6);
+
+let KEYS = [];
+let idx = 0;
+let mode = "trace";
+let peeking = false;
+let currentGrade = 1;
+
+const select = document.getElementById('kanjiSelect');
+const gradeTabs = document.getElementById('gradeTabs');
+
+function rebuildKeys(){
+  KEYS = Object.keys(KANJI).filter(k => KANJI[k].grade === currentGrade);
+  select.innerHTML = '';
+  KEYS.forEach((k)=>{
+    const o = document.createElement('option');
+    o.value = k;
+    o.textContent = `${k}　（${KANJI[k].kunyomi!=="—" ? KANJI[k].kunyomi.split(/[・／]/)[0] : KANJI[k].onyomi.split(/[・]/)[0]}）`;
+    select.appendChild(o);
+  });
+}
+
+function setGrade(g){
+  currentGrade = g;
+  idx = 0;
+  document.getElementById('pageTitle').textContent = `${currentGrade}年生の かんじ（ぜんぶ）`;
+  document.documentElement.style.setProperty('--accent', `var(--g${currentGrade})`);
+  [...gradeTabs.children].forEach(b => b.classList.toggle('active', Number(b.dataset.g) === currentGrade));
+  rebuildKeys();
+  render();
+}
+
+gradeTabs.addEventListener('click', e=>{
+  const b = e.target.closest('.gradeTab');
+  if(!b) return;
+  setGrade(Number(b.dataset.g));
+});
+rebuildKeys();
+
+select.onchange = () => { idx = KEYS.indexOf(select.value); render(); };
+document.getElementById('prevBtn').onclick = () => { idx = (idx-1+KEYS.length)%KEYS.length; render(); };
+document.getElementById('nextBtn').onclick = () => { idx = (idx+1)%KEYS.length; render(); };
+
+const svg = document.getElementById('svgStage');
+const msg = document.getElementById('msg');
+const guideNote = document.getElementById('guideNote');
+const strokeBadge = document.getElementById('strokeBadge');
+const SVGNS = 'http://www.w3.org/2000/svg';
+const KVG_SCALE = 280 / 109; // KanjiVGの座標系(0-109)を280x280のマス目に合わせる
+let playToken = 0; // 書き順アニメーションの世代カウンタ（漢字/モード切替時に古い再生を止める）
+const btnWatchStroke = document.getElementById('btnWatchStroke');
+const btnPlayStroke = document.getElementById('btnPlayStroke');
+const playBadge = document.getElementById('playBadge');
+const btnClear = document.getElementById('btnClear');
+const btnPeek = document.getElementById('btnPeek');
+const btnDone = document.getElementById('btnDone');
+const modeToggle = document.getElementById('modeToggle');
+const allPlayBtn = document.getElementById('allPlay');
+const progress = document.getElementById('progress');
+
+modeToggle.addEventListener('click', e=>{
+  const b = e.target.closest('button');
+  if(!b) return;
+  mode = b.dataset.m;
+  [...modeToggle.children].forEach(c=>c.classList.toggle('active', c===b));
+  peeking = false;
+  render(true);
+});
+
+let inkBackup = [];
+
+function current(){ return KANJI[KEYS[idx]]; }
+
+function render(keepInk){
+  const k = KEYS[idx];
+  const data = current();
+  select.value = k;
+  progress.textContent = `${idx+1} / ${KEYS.length} 字目`;
+
+  document.getElementById('onYomi').textContent = data.onyomi;
+  document.getElementById('kunYomi').textContent = data.kunyomi;
+  document.getElementById('phraseLines').innerHTML = data.phrases.map((p,i)=>
+    `<div class="phrase-line">
+       <b>${p.label}</b>
+       <span class="txt">${p.text}</span>
+       <button class="speak-btn" data-i="${i}">🔊</button>
+     </div>`
+  ).join('');
+  document.getElementById('exampleBox').innerHTML =
+    `<b>${k}</b> を つかった ことば： ${data.example} <button class="speak-btn" id="speakExample">🔊</button>`;
+
+  const strokeN = (STROKES[k] && STROKES[k].length) || data.strokeCount;
+  strokeBadge.innerHTML = `この字は <b>${strokeN}画</b> だよ`;
+  btnPeek.style.display = mode==='free' ? 'inline-block' : 'none';
+  guideNote.textContent = mode==='trace'
+    ? '文字がうっすら見えているよ。上からなぞってかいてみよう。'
+    : '文字はかくれています。おぼえてかいてみよう。「ちらっと見る」でかくにんできるよ。';
+
+  if(!keepInk){ inkBackup = []; }
+  drawStage();
+  msg.textContent = '';
+  msg.className = 'msg';
+}
+
+function guideMarkup(k){
+  const strokes = STROKES[k];
+  if(!strokes || !strokes.length){
+    // KanjiVGデータが無い場合のフォールバック（通常は発生しない）
+    return `<text x="140" y="215" font-size="230" text-anchor="middle" class="kanjiGuide">${k}</text>`;
+  }
+  const paths = strokes.map(d => `<path d="${d}"/>`).join('');
+  return `<g class="kvgGuide" transform="scale(${KVG_SCALE})">${paths}</g>`;
+}
+
+function drawStage(){
+  playToken++; // 表示を作り直すので、進行中の書き順アニメーションは打ち切る
+  svg.innerHTML = '';
+  playBadge.classList.remove('show');
+  const k = KEYS[idx];
+  if(mode==='trace' || peeking){
+    svg.insertAdjacentHTML('beforeend', guideMarkup(k));
+  }
+  reAttachInk();
+}
+
+function clearInk(){
+  inkBackup = [];
+  [...svg.querySelectorAll('.inkpath')].forEach(p=>p.remove());
+}
+btnClear.onclick = () => { clearInk(); msg.textContent=''; msg.className='msg'; };
+
+btnPeek.onmousedown = () => { peeking = true; drawStage(); };
+btnPeek.onmouseup = btnPeek.onmouseleave = btnPeek.ontouchend = () => { peeking = false; drawStage(); };
+btnPeek.ontouchstart = (e)=>{ e.preventDefault(); peeking = true; drawStage(); };
+
+function reAttachInk(){
+  inkBackup.forEach(d=>{
+    svg.insertAdjacentHTML('beforeend', `<path d="${d}" class="inkpath" stroke="#2E2B27" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`);
+  });
+}
+
+btnDone.onclick = () => {
+  msg.textContent = `よくがんばったね！「${KEYS[idx]}」を　かけたね 🎉`;
+  msg.className = 'msg win';
+};
+
+// 画数を「読み上げ」て教える
+btnPlayStroke.onclick = () => {
+  const k = KEYS[idx];
+  const n = (STROKES[k] && STROKES[k].length) || current().strokeCount;
+  // うっすら光らせて画数ぶんパルスさせる
+  const guideEl = svg.querySelector('.kvgGuide, .kanjiGuide');
+  if(guideEl){
+    let count = 0;
+    const pulse = () => {
+      if(count>=Math.min(n,8)) return;
+      guideEl.animate([{opacity:0.55},{opacity:0.95},{opacity:0.55}], {duration:380});
+      count++;
+      setTimeout(pulse, 420);
+    };
+    pulse();
+  }
+  speakText(`${k}は　ぜんぶで　${n}画だよ`);
+};
+
+// --- 書き順アニメーション（KanjiVGの正確なストロークデータを使用） ---
+function playStrokeOrder(){
+  const k = KEYS[idx];
+  const strokes = STROKES[k];
+  if(!strokes || !strokes.length) return;
+
+  playToken++;
+  const myToken = playToken;
+
+  const old = svg.querySelector('.kvgPlay');
+  if(old) old.remove();
+
+  const g = document.createElementNS(SVGNS, 'g');
+  g.setAttribute('class', 'kvgPlay');
+  g.setAttribute('transform', `scale(${KVG_SCALE})`);
+  svg.appendChild(g);
+
+  const pathEls = strokes.map(d=>{
+    const p = document.createElementNS(SVGNS, 'path');
+    p.setAttribute('d', d);
+    g.appendChild(p);
+    // 自分の番が来るまでは完全に隠しておく（先の画が最初から見えてしまうのを防ぐ）
+    const len = p.getTotalLength();
+    p.style.strokeDasharray = String(len);
+    p.style.strokeDashoffset = String(len);
+    return p;
+  });
+
+  // 今どこを書いているか示す、動く「ペン先」の丸
+  const penTip = document.createElementNS(SVGNS, 'circle');
+  penTip.setAttribute('class', 'penTip');
+  penTip.setAttribute('r', '2.4');
+  penTip.style.display = 'none';
+  g.appendChild(penTip);
+
+  playBadge.classList.add('show');
+
+  function addStrokeNumber(n, x, y){
+    const numG = document.createElementNS(SVGNS, 'g');
+    numG.setAttribute('transform', `translate(${x},${y})`);
+    const bg = document.createElementNS(SVGNS, 'circle');
+    bg.setAttribute('class', 'strokeNumBg');
+    bg.setAttribute('r', '4.2');
+    const tx = document.createElementNS(SVGNS, 'text');
+    tx.setAttribute('class', 'strokeNumTx');
+    tx.setAttribute('y', '0.3');
+    tx.textContent = String(n);
+    numG.appendChild(bg);
+    numG.appendChild(tx);
+    g.insertBefore(numG, penTip);
+  }
+
+  function step(i){
+    if(myToken !== playToken) return; // 途中でクリックし直された/画面が変わった場合は打ち切り
+    if(i >= pathEls.length){
+      penTip.style.display = 'none';
+      playBadge.textContent = 'できた！';
+      setTimeout(()=>{ if(myToken===playToken) playBadge.classList.remove('show'); }, 900);
+      msg.textContent = `「${k}」の　書き順だよ！`;
+      msg.className = 'msg win';
+      return;
+    }
+    const p = pathEls[i];
+    const len = p.getTotalLength();
+    const start = p.getPointAtLength(0);
+    addStrokeNumber(i+1, start.x, start.y);
+    playBadge.textContent = `${i+1} / ${pathEls.length} 画目`;
+    penTip.style.display = '';
+
+    const duration = 480;
+    const t0 = performance.now();
+    function frame(now){
+      if(myToken !== playToken) return;
+      const t = Math.min(1, (now - t0) / duration);
+      const eased = t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2; // ease-in-out
+      const dist = eased * len;
+      const pt = p.getPointAtLength(dist);
+      penTip.setAttribute('cx', pt.x);
+      penTip.setAttribute('cy', pt.y);
+      p.style.strokeDasharray = String(len);
+      p.style.strokeDashoffset = String(len - dist);
+      if(t < 1) requestAnimationFrame(frame);
+      else setTimeout(()=>step(i+1), 150);
+    }
+    requestAnimationFrame(frame);
+  }
+  step(0);
+}
+btnWatchStroke.onclick = playStrokeOrder;
+
+// --- 自由に書く（判定なし、練習スペース） ---
+let dragging = false;
+let curPathEl = null;
+let curPoints = [];
+
+svg.addEventListener('pointerdown', e=>{
+  dragging = true;
+  curPoints = [svgPoint(e)];
+  curPathEl = document.createElementNS('http://www.w3.org/2000/svg','path');
+  curPathEl.setAttribute('class','inkpath');
+  curPathEl.setAttribute('stroke', '#2E2B27');
+  curPathEl.setAttribute('stroke-width', '6');
+  curPathEl.setAttribute('fill', 'none');
+  curPathEl.setAttribute('stroke-linecap', 'round');
+  curPathEl.setAttribute('stroke-linejoin', 'round');
+  svg.appendChild(curPathEl);
+});
+svg.addEventListener('pointermove', e=>{
+  if(!dragging) return;
+  curPoints.push(svgPoint(e));
+  curPathEl.setAttribute('d', 'M ' + curPoints.map(p=>`${p.x} ${p.y}`).join(' L '));
+});
+window.addEventListener('pointerup', ()=>{
+  if(!dragging) return;
+  dragging = false;
+  if(curPathEl) inkBackup.push(curPathEl.getAttribute('d'));
+});
+
+function svgPoint(evt){
+  const rect = svg.getBoundingClientRect();
+  const x = (evt.clientX - rect.left) / rect.width * 280;
+  const y = (evt.clientY - rect.top) / rect.height * 280;
+  return {x,y};
+}
+
+// --- 読み上げ ---
+// となえかたの「（）」は書き順を示す視覚的な注記（例:「ノ（ノ）ンストップで」）なので、
+// そのまま読み上げるとカッコの中身まで喋って聞き取りにくくなる。読み上げ用テキストでは中身ごと取り除く。
+function forSpeech(text){
+  return text.replace(/（[^）]*）/g, '');
+}
+
+function speakText(text){
+  if(!('speechSynthesis' in window)){
+    msg.textContent = 'このブラウザは読み上げに対応していません';
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(forSpeech(text));
+  utter.lang = 'ja-JP'; utter.rate = 0.85; utter.pitch = 1.05;
+  window.speechSynthesis.speak(utter);
+  return utter;
+}
+
+document.addEventListener('click', e=>{
+  const b = e.target.closest('.speak-btn');
+  if(!b) return;
+  if(b.id === 'speakExample'){ speakText(current().example); return; }
+  const i = +b.dataset.i;
+  const phrase = current().phrases[i];
+  b.classList.add('playing');
+  const utter = speakText(phrase.text);
+  if(utter){ utter.onend = () => b.classList.remove('playing'); }
+  else setTimeout(()=>b.classList.remove('playing'), 800);
+});
+
+allPlayBtn.onclick = () => {
+  if(!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const phrases = current().phrases.map(p=>forSpeech(p.text));
+  let i = 0;
+  function next(){
+    if(i>=phrases.length) return;
+    const u = new SpeechSynthesisUtterance(phrases[i]);
+    u.lang='ja-JP'; u.rate=0.85; u.pitch=1.05;
+    u.onend = () => { i++; setTimeout(next, 350); };
+    window.speechSynthesis.speak(u);
+  }
+  next();
+};
+
+render();
+</script>
+</body>
+</html>
