@@ -147,6 +147,7 @@
   .gridwrap{
     position:relative; width:min(280px,84vw); height:min(280px,84vw); aspect-ratio:1/1;
     background:#fff; border:1.5px solid var(--accent); transition:border-color .2s;
+    touch-action:none; overscroll-behavior:contain;
   }
   .gridwrap svg{ position:absolute; top:0; left:0; width:100%; height:100%; touch-action:none; cursor:crosshair; }
   .cross-h, .cross-v{ position:absolute; background:var(--guide); opacity:.55; }
@@ -542,7 +543,9 @@ let curPathEl = null;
 let curPoints = [];
 
 svg.addEventListener('pointerdown', e=>{
+  e.preventDefault(); // スマホでここから画面がスクロール/フリックしてしまうのを防ぐ
   dragging = true;
+  svg.setPointerCapture(e.pointerId); // 指がマス目の外にはみ出しても描画を続けられるように
   curPoints = [svgPoint(e)];
   curPathEl = document.createElementNS('http://www.w3.org/2000/svg','path');
   curPathEl.setAttribute('class','inkpath');
@@ -555,10 +558,11 @@ svg.addEventListener('pointerdown', e=>{
 });
 svg.addEventListener('pointermove', e=>{
   if(!dragging) return;
+  e.preventDefault();
   curPoints.push(svgPoint(e));
   curPathEl.setAttribute('d', 'M ' + curPoints.map(p=>`${p.x} ${p.y}`).join(' L '));
 });
-window.addEventListener('pointerup', ()=>{
+window.addEventListener('pointerup', (e)=>{
   if(!dragging) return;
   dragging = false;
   if(curPathEl) inkBackup.push(curPathEl.getAttribute('d'));
