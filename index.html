@@ -426,6 +426,12 @@ function reAttachInk(){
 btnDone.onclick = () => {
   msg.textContent = `よくがんばったね！「${KEYS[idx]}」を　かけたね 🎉`;
   msg.className = 'msg win';
+  const doneToken = ++playToken; // その間にモード切替やページ移動があったら自動送りをキャンセル
+  setTimeout(() => {
+    if(playToken !== doneToken) return;
+    idx = (idx+1) % KEYS.length;
+    render();
+  }, 1300);
 };
 
 // 画数を「読み上げ」て教える
