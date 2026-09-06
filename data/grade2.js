@@ -1,6 +1,6 @@
 const KANJI_GRADE2 = {
 "刀":{grade:2,onyomi:"トウ",kunyomi:"かたな",strokeCount:2,
-  phrases:[{label:"①",text:"ノ（ノ）ンストップで"},{label:"②",text:"フ（フ）フ"}],
+  phrases:[{label:"①",text:"フ（フ）フ"},{label:"②",text:"ノ（ノ）ンストップで"}],
   example:"刀をぬく"},
 "丸":{grade:2,onyomi:"ガン",kunyomi:"まる・まるい・まるめる",strokeCount:3,
   phrases:[{label:"①",text:"点（、）で"},{label:"②",text:"九（九）十"}],

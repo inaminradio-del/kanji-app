@@ -156,7 +156,7 @@ const KANJI_GRADE1 = {
   phrases:[{label:"①",text:"テーブル（丁）の下の"},{label:"②",text:"三（三）びきの　みみず（一）の"}],
   example:"耳をすます／うさぎの耳とぞうの耳"},
 "入":{grade:1,onyomi:"ニュウ",kunyomi:"いる・いれる・はいる",strokeCount:2,
-  phrases:[{label:"①",text:"カーテン（＼）を"},{label:"②",text:"ノ（ノ）に　かかった"}],
+  phrases:[{label:"①",text:"ノ（ノ）に　かかった"},{label:"②",text:"カーテン（＼）を"}],
   example:"入り口からはいる／ランドセルにノートを入れる"},
 "男":{grade:1,onyomi:"ダン・ナン",kunyomi:"おとこ",strokeCount:7,
   phrases:[{label:"①",text:"田（田）んぼで"},{label:"②",text:"カ（力）ツどんを　たべる"}],
