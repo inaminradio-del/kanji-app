@@ -45,6 +45,41 @@
     .titlewrap h1{ gap:6px; }
   }
 
+  /* --- れんしゅう／チャレンジ 切り替え --- */
+  .appModeToggle{
+    display:flex; gap:10px; margin:10px 0 4px; flex-wrap:wrap; justify-content:center;
+  }
+  .appModeToggle button{
+    font-family:'Zen Maru Gothic', sans-serif; font-weight:700; font-size:15px;
+    border:2px solid var(--sumi); background:#fffdf8; color:var(--sumi-soft);
+    padding:10px 20px; border-radius:999px; cursor:pointer;
+  }
+  .appModeToggle button.active{ background:var(--sumi); color:var(--paper); }
+
+  /* --- チャレンジもんだい --- */
+  .challenge-box{
+    background:#fffdf8; border:1.5px solid var(--accent); border-radius:14px;
+    padding:22px 20px 18px; margin-bottom:16px; position:relative; text-align:center;
+  }
+  .challenge-box .label{
+    position:absolute; top:-11px; left:16px;
+    background:var(--accent); color:#fff;
+    font-size:12px; padding:2px 10px; border-radius:999px; letter-spacing:.05em;
+  }
+  .challenge-sentence{
+    font-size:22px; font-weight:700; line-height:1.8; margin:14px 0 8px; color:var(--sumi);
+  }
+  .blankTile{
+    display:inline-block; min-width:1.3em; padding:0 4px;
+    border:2px dashed var(--accent); border-radius:6px; background:#fff;
+  }
+  .challenge-sub{ font-size:13px; color:var(--sumi-soft); }
+  .hint-toggle{
+    display:block; margin:0 auto 12px; font-family:'Zen Maru Gothic', sans-serif;
+    font-weight:700; font-size:13px; border:1.5px dashed var(--sumi-soft); background:none;
+    color:var(--sumi-soft); padding:7px 16px; border-radius:999px; cursor:pointer;
+  }
+
   /* --- 学年タブ --- */
   .gradeTabs{
     display:flex; gap:6px; flex-wrap:wrap; justify-content:center;
@@ -216,6 +251,11 @@
   <h1 id="pageTitle">1年生の かんじ（ぜんぶ）</h1>
 </div>
 
+<div class="appModeToggle" id="appModeToggle">
+  <button data-am="practice" class="active">📝 れんしゅうモード</button>
+  <button data-am="challenge">🎯 チャレンジモード</button>
+</div>
+
 <div class="gradeTabs" id="gradeTabs">
   <button class="gradeTab active" data-g="1">1ねんせい</button>
   <button class="gradeTab" data-g="2">2ねんせい</button>
@@ -233,24 +273,35 @@
 
 <div class="stage">
   <div class="info">
-    <div class="phrase-box">
-      <div class="label">となえかた</div>
-      <button class="allplay" id="allPlay">▶ ぜんぶ きく</button>
-      <div id="phraseLines"></div>
+    <div class="challenge-box" id="challengeBox" style="display:none;">
+      <div class="label">もんだい</div>
+      <button class="allplay" id="challengeSpeak">▶ もんだいを きく</button>
+      <div class="challenge-sentence" id="challengeSentence"></div>
+      <div class="challenge-sub">□に入る漢字を書いてみよう！</div>
     </div>
 
-    <div class="readings">
-      <div class="reading-pill on">
-        <div class="tag">おん</div>
-        <div class="val" id="onYomi"></div>
-      </div>
-      <div class="reading-pill">
-        <div class="tag">くん</div>
-        <div class="val" id="kunYomi"></div>
-      </div>
-    </div>
+    <button id="btnHint" class="hint-toggle" style="display:none;">💡 ヒントを見る</button>
 
-    <div class="example" id="exampleBox"></div>
+    <div id="hintArea">
+      <div class="phrase-box">
+        <div class="label">となえかた</div>
+        <button class="allplay" id="allPlay">▶ ぜんぶ きく</button>
+        <div id="phraseLines"></div>
+      </div>
+
+      <div class="readings">
+        <div class="reading-pill on">
+          <div class="tag">おん</div>
+          <div class="val" id="onYomi"></div>
+        </div>
+        <div class="reading-pill">
+          <div class="tag">くん</div>
+          <div class="val" id="kunYomi"></div>
+        </div>
+      </div>
+
+      <div class="example" id="exampleBox"></div>
+    </div>
   </div>
 
   <div class="traceCard">
@@ -289,20 +340,40 @@ let idx = 0;
 let mode = "trace";
 let peeking = false;
 let currentGrade = 1;
+let appMode = "practice"; // "practice" | "challenge"
 
 const select = document.getElementById('kanjiSelect');
 const gradeTabs = document.getElementById('gradeTabs');
+const appModeToggle = document.getElementById('appModeToggle');
+const challengeBox = document.getElementById('challengeBox');
+const challengeSentence = document.getElementById('challengeSentence');
+const challengeSpeak = document.getElementById('challengeSpeak');
+const btnHint = document.getElementById('btnHint');
+const hintArea = document.getElementById('hintArea');
 
 function rebuildKeys(){
   KEYS = Object.keys(KANJI).filter(k => KANJI[k].grade === currentGrade);
   select.innerHTML = '';
-  KEYS.forEach((k)=>{
+  KEYS.forEach((k,i)=>{
     const o = document.createElement('option');
     o.value = k;
-    o.textContent = `${k}　（${KANJI[k].kunyomi!=="—" ? KANJI[k].kunyomi.split(/[・／]/)[0] : KANJI[k].onyomi.split(/[・]/)[0]}）`;
+    o.textContent = appMode === 'challenge'
+      ? `だい${i+1}もん`
+      : `${k}　（${KANJI[k].kunyomi!=="—" ? KANJI[k].kunyomi.split(/[・／]/)[0] : KANJI[k].onyomi.split(/[・]/)[0]}）`;
     select.appendChild(o);
   });
 }
+
+appModeToggle.addEventListener('click', e=>{
+  const b = e.target.closest('button');
+  if(!b) return;
+  appMode = b.dataset.am;
+  [...appModeToggle.children].forEach(c=>c.classList.toggle('active', c===b));
+  mode = appMode === 'challenge' ? 'free' : 'trace';
+  peeking = false;
+  rebuildKeys();
+  render();
+});
 
 function setGrade(g){
   currentGrade = g;
@@ -355,6 +426,15 @@ let inkBackup = [];
 
 function current(){ return KANJI[KEYS[idx]]; }
 
+let challengeSourceText = ''; // 今の問題文（答えの漢字を含む、読み上げ用）
+
+function buildChallengeSentence(k, data){
+  const examples = data.example.split('／');
+  const chosen = examples[Math.floor(Math.random()*examples.length)];
+  const blanked = chosen.split(k).join('<span class="blankTile">　</span>');
+  return {chosen, blanked};
+}
+
 function render(keepInk){
   const k = KEYS[idx];
   const data = current();
@@ -373,18 +453,40 @@ function render(keepInk){
   document.getElementById('exampleBox').innerHTML =
     `<b>${k}</b> を つかった ことば： ${data.example} <button class="speak-btn" id="speakExample">🔊</button>`;
 
+  const isChallenge = appMode === 'challenge';
+  challengeBox.style.display = isChallenge ? 'block' : 'none';
+  btnHint.style.display = isChallenge ? 'block' : 'none';
+  modeToggle.style.display = isChallenge ? 'none' : 'flex';
+  hintArea.style.display = isChallenge ? 'none' : 'block';
+  btnHint.textContent = '💡 ヒントを見る';
+  if(isChallenge){
+    const {chosen, blanked} = buildChallengeSentence(k, data);
+    challengeSourceText = chosen;
+    challengeSentence.innerHTML = blanked;
+  }
+
   const strokeN = (STROKES[k] && STROKES[k].length) || data.strokeCount;
   strokeBadge.innerHTML = `この字は <b>${strokeN}画</b> だよ`;
   btnPeek.style.display = mode==='free' ? 'inline-block' : 'none';
-  guideNote.textContent = mode==='trace'
-    ? '文字がうっすら見えているよ。上からなぞってかいてみよう。'
-    : '文字はかくれています。おぼえてかいてみよう。「ちらっと見る」でかくにんできるよ。';
+  guideNote.textContent = isChallenge
+    ? '□に入る漢字を考えて、書いてみよう。わからないときは「ちらっと見る」でかくにんできるよ。'
+    : mode==='trace'
+      ? '文字がうっすら見えているよ。上からなぞってかいてみよう。'
+      : '文字はかくれています。おぼえてかいてみよう。「ちらっと見る」でかくにんできるよ。';
 
   if(!keepInk){ inkBackup = []; }
   drawStage();
   msg.textContent = '';
   msg.className = 'msg';
 }
+
+btnHint.onclick = () => {
+  const showing = hintArea.style.display !== 'none';
+  hintArea.style.display = showing ? 'none' : 'block';
+  btnHint.textContent = showing ? '💡 ヒントを見る' : '💡 ヒントをかくす';
+};
+
+challengeSpeak.onclick = () => { speakText(challengeSourceText); };
 
 function guideMarkup(k){
   const strokes = STROKES[k];
