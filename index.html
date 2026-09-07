@@ -606,9 +606,9 @@ let doneRetried = false; // 一度「おしい」と言われた後にもう一�
 btnDone.onclick = () => {
   const k = KEYS[idx];
   const noInk = inkBackup.length === 0;
-  // れんしゅうモードの「見ないでかく」はお手本が見えないぶんバランスが
-  // 崩れやすく、書けてはいても形の一致判定に通りにくいので、そこだけは判定しない。
-  const skipShapeCheck = appMode === 'practice' && mode === 'free';
+  // お手本が見えない状態（れんしゅうモードの「見ないでかく」／チャレンジモード）は
+  // バランスが崩れやすく、書けてはいても形の一致判定に通りにくいので判定しない。
+  const skipShapeCheck = mode === 'free';
   const score = skipShapeCheck ? null : computeMatchScore(k);
   const looksOk = !noInk && (score === null || score >= 0.35);
 
