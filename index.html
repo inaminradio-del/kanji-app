@@ -605,12 +605,15 @@ let doneRetried = false; // 一度「おしい」と言われた後にもう一�
 
 btnDone.onclick = () => {
   const k = KEYS[idx];
+  const noInk = inkBackup.length === 0;
   const score = computeMatchScore(k);
-  const looksOk = score === null || score >= 0.35; // 手書きが無い場合は判定せず素通り
+  const looksOk = !noInk && score >= 0.35;
 
   if(!looksOk && !doneRetried){
     doneRetried = true;
-    msg.textContent = `おしい！お手本と見くらべて、もういちど書いてみよう。`;
+    msg.textContent = noInk
+      ? `まだ何も書いてないよ！マス目に書いてから「かけた！」を押してね。`
+      : `おしい！お手本と見くらべて、もういちど書いてみよう。`;
     msg.className = 'msg';
     return;
   }
