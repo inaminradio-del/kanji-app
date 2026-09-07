@@ -214,6 +214,7 @@
     text-anchor:middle; dominant-baseline:central;
   }
   .kvgPlay .penTip{ fill:var(--gold); stroke:#fff; stroke-width:0.6; }
+  .correctMark{ fill:none; stroke:var(--hanko); stroke-width:7; stroke-linecap:round; filter:drop-shadow(0 1px 1px rgba(0,0,0,.15)); }
 
   .playBadge{
     position:absolute; top:8px; right:8px; z-index:2;
@@ -609,6 +610,43 @@ function computeMatchScore(k){
 
 let doneRetried = false; // 一度「おしい」と言われた後にもう一押ししたら、そのまま先に進める
 
+// 「かけた！」に成功したときに、実際に書いたマスの範囲を手描き風の赤丸で囲む。
+// 正確に字を囲む必要はなく、「書いた場所」がだいたい分かればよい。
+function drawCorrectMark(){
+  const pts = [];
+  inkBackup.forEach(d => {
+    const nums = d.match(/-?\d+(?:\.\d+)?/g) || [];
+    for(let i=0; i+1<nums.length; i+=2){ pts.push([Number(nums[i]), Number(nums[i+1])]); }
+  });
+  if(!pts.length) return;
+  const xs = pts.map(p=>p[0]), ys = pts.map(p=>p[1]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const pad = 20;
+  const cx = (minX+maxX)/2, cy = (minY+maxY)/2;
+  const rx = Math.max((maxX-minX)/2 + pad, 46);
+  const ry = Math.max((maxY-minY)/2 + pad, 46);
+
+  const old = svg.querySelector('.correctMark');
+  if(old) old.remove();
+
+  const ellipse = document.createElementNS(SVGNS, 'ellipse');
+  ellipse.setAttribute('class', 'correctMark');
+  ellipse.setAttribute('cx', cx);
+  ellipse.setAttribute('cy', cy);
+  ellipse.setAttribute('rx', rx);
+  ellipse.setAttribute('ry', ry);
+  svg.appendChild(ellipse);
+
+  const len = ellipse.getTotalLength();
+  ellipse.style.strokeDasharray = String(len);
+  ellipse.style.strokeDashoffset = String(len);
+  requestAnimationFrame(() => {
+    ellipse.style.transition = 'stroke-dashoffset .5s ease-out';
+    ellipse.style.strokeDashoffset = '0';
+  });
+}
+
 btnDone.onclick = () => {
   const k = KEYS[idx];
   const noInk = inkBackup.length === 0;
@@ -628,6 +666,7 @@ btnDone.onclick = () => {
   }
 
   doneRetried = false;
+  drawCorrectMark();
   msg.textContent = `よくがんばったね！「${k}」を　かけたね 🎉`;
   msg.className = 'msg win';
   const doneToken = ++playToken; // その間にモード切替やページ移動があったら自動送りをキャンセル
