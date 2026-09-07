@@ -487,6 +487,7 @@ function render(keepInk){
       : '文字はかくれています。おぼえてかいてみよう。「ちらっと見る」でかくにんできるよ。';
 
   if(!keepInk){ inkBackup = []; }
+  doneRetried = false;
   drawStage();
   msg.textContent = '';
   msg.className = 'msg';
@@ -537,8 +538,85 @@ function reAttachInk(){
   });
 }
 
+// --- 見本とだいたい合っているかの判定 ---
+// KanjiVGの正解パスと、自分で書いたインクをそれぞれ小さなキャンバスに焼きつけて、
+// 重なり具合（IoU＝重なった面積 ÷ 合計面積）でざっくり判定する。
+// 画数や書き順は見ておらず、あくまで「だいたい似た場所に似た形が書けているか」のチェック。
+const matchCanvas = document.createElement('canvas');
+matchCanvas.width = 64; matchCanvas.height = 64;
+const matchCtx = matchCanvas.getContext('2d');
+
+function rasterize(paths, coordSize){
+  const scale = matchCanvas.width / coordSize;
+  matchCtx.clearRect(0, 0, matchCanvas.width, matchCanvas.height);
+  matchCtx.save();
+  matchCtx.scale(scale, scale);
+  matchCtx.lineWidth = 4 / scale; // どちらも仕上がり太さがだいたい同じになるよう逆算
+  matchCtx.lineCap = 'round';
+  matchCtx.lineJoin = 'round';
+  matchCtx.strokeStyle = '#000';
+  paths.forEach(d => { try{ matchCtx.stroke(new Path2D(d)); }catch(e){} });
+  matchCtx.restore();
+  return matchCtx.getImageData(0, 0, matchCanvas.width, matchCanvas.height).data;
+}
+
+// 書いた場所やサイズが手本と多少ズレていても不利にならないよう、
+// 実際に書いた範囲（バウンディングボックス）を手本と同じ大きさ・位置に合わせ直してから比べる。
+function normalizeInkTo109(paths){
+  const pts = [];
+  paths.forEach(d => {
+    const nums = d.match(/-?\d+(?:\.\d+)?/g) || [];
+    for(let i=0; i+1<nums.length; i+=2){ pts.push([Number(nums[i]), Number(nums[i+1])]); }
+  });
+  if(!pts.length) return paths;
+  const xs = pts.map(p=>p[0]), ys = pts.map(p=>p[1]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const margin = 10, target = 109 - margin*2;
+  const spanX = Math.max(maxX-minX, 1), spanY = Math.max(maxY-minY, 1);
+  const scaleX = target/spanX, scaleY = target/spanY;
+  return paths.map(d=>{
+    let i = 0;
+    return d.replace(/-?\d+(?:\.\d+)?/g, (m)=>{
+      const v = Number(m);
+      const isX = (i % 2 === 0);
+      i++;
+      return isX ? String(margin + (v-minX)*scaleX) : String(margin + (v-minY)*scaleY);
+    });
+  });
+}
+
+function computeMatchScore(k){
+  const strokes = STROKES[k];
+  if(!strokes || !strokes.length || !inkBackup.length) return null;
+  const normalizedInk = normalizeInkTo109(inkBackup);
+  const refData = rasterize(strokes, 109);        // KanjiVGは0-109座標系
+  const inkData = rasterize(normalizedInk, 109);  // 手書きも同じ0-109座標系に正規化して比較
+  let inter = 0, union = 0;
+  for(let i = 3; i < refData.length; i += 4){ // アルファチャンネルだけ見る
+    const a = refData[i] > 0, b = inkData[i] > 0;
+    if(a || b) union++;
+    if(a && b) inter++;
+  }
+  return union ? inter / union : 0;
+}
+
+let doneRetried = false; // 一度「おしい」と言われた後にもう一押ししたら、そのまま先に進める
+
 btnDone.onclick = () => {
-  msg.textContent = `よくがんばったね！「${KEYS[idx]}」を　かけたね 🎉`;
+  const k = KEYS[idx];
+  const score = computeMatchScore(k);
+  const looksOk = score === null || score >= 0.35; // 手書きが無い場合は判定せず素通り
+
+  if(!looksOk && !doneRetried){
+    doneRetried = true;
+    msg.textContent = `おしい！お手本と見くらべて、もういちど書いてみよう。`;
+    msg.className = 'msg';
+    return;
+  }
+
+  doneRetried = false;
+  msg.textContent = `よくがんばったね！「${k}」を　かけたね 🎉`;
   msg.className = 'msg win';
   const doneToken = ++playToken; // その間にモード切替やページ移動があったら自動送りをキャンセル
   setTimeout(() => {
