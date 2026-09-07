@@ -434,19 +434,22 @@ let challengeSourceText = ''; // 今の問題文（答えの漢字を含む、�
 
 // 例文の中に、答えの漢字がそもそも入っていない文が混ざっていることがある（データの不備）。
 // 空欄が作れない文を選んでしまわないよう、その字を含む文だけに絞り込む。
+// どの例文を使うかは毎回ランダムだと読み方のヒントとズレてしまうので、
+// 常に最初に一致した文に固定する（challengeReadingが対応しているのはこの文）。
 function buildChallengeSentence(k, data){
   const examples = data.example.split('／').filter(e => e.includes(k));
-  const pool = examples.length ? examples : [`${k}を　つかって　かいてみよう`];
-  const chosen = pool[Math.floor(Math.random()*pool.length)];
+  const chosen = examples.length ? examples[0] : `${k}を　つかって　かいてみよう`;
   const blanked = chosen.split(k).join('<span class="blankTile">　</span>');
   return {chosen, blanked};
 }
 
 // 読み方のヒント。
-// 例文が「九つ」のように訓読みを使っているとは限らず、「八回（はちかい）」
-// 「二匹（にひき）」のように音読みを使っていることもある。どちらの読みで
-// 出題されているかはデータから判別できないので、おん・くん両方をそのまま見せる。
+// challengeReading（この字専用に、実際に出題される例文に対応する読みを
+// 1つだけ選んで用意したデータ）があればそれだけを表示する。
+// まだ用意できていない字は、代わりにおん・くんの候補をすべて見せる
+// （精度は落ちるが、少なくとも読みが完全に抜けることは無い）。
 function primaryReading(data){
+  if(data.challengeReading) return data.challengeReading;
   const parts = [];
   if(data.onyomi !== '—') parts.push(data.onyomi);
   if(data.kunyomi !== '—') parts.push(data.kunyomi);
