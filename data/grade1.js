@@ -36,7 +36,7 @@ const KANJI_GRADE1 = {
   phrases:[{label:"①",text:"なべぶた（亠）の下に"},{label:"②",text:"ソ（ソ）ー（｜）ッと"}],
   example:"はたを立てる／じめんに立つ"},
 "上":{grade:1,onyomi:"ジョウ",kunyomi:"うえ・うわ／あげる・あがる／のぼる",strokeCount:3,
-  phrases:[{label:"①",text:"じめん（一）に"},{label:"②",text:"ト（卜）を"}],
+  phrases:[{label:"①",text:"ト（卜）を"},{label:"②",text:"じめん（一）に"}],
   example:"陸は陸に上がること／たなの上のうわばき"},
 "下":{grade:1,onyomi:"カ・ゲ",kunyomi:"した・しも／さげる・さがる／くだる・くだす・くださる／おろす・おりる",strokeCount:3,
   phrases:[{label:"①",text:"じめん（一）に"},{label:"②",text:"ト（卜）を　うめて"}],
