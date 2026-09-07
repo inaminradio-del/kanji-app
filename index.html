@@ -441,12 +441,15 @@ function buildChallengeSentence(k, data){
   return {chosen, blanked};
 }
 
-// 読み方のヒント（くん優先・無ければおん）。
-// 「ここの・ここのつ」のように候補が複数あるとき、例文で使われているのが
-// どれか（送りがなの有無など）まではデータから判別できないので、
-// 1つだけ選んで外すと文脈と食い違うことがある。安全のため候補は全部見せる。
+// 読み方のヒント。
+// 例文が「九つ」のように訓読みを使っているとは限らず、「八回（はちかい）」
+// 「二匹（にひき）」のように音読みを使っていることもある。どちらの読みで
+// 出題されているかはデータから判別できないので、おん・くん両方をそのまま見せる。
 function primaryReading(data){
-  return data.kunyomi !== '—' ? data.kunyomi : data.onyomi;
+  const parts = [];
+  if(data.onyomi !== '—') parts.push(data.onyomi);
+  if(data.kunyomi !== '—') parts.push(data.kunyomi);
+  return parts.join('／');
 }
 
 function render(keepInk){
