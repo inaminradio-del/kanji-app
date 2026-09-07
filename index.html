@@ -441,9 +441,12 @@ function buildChallengeSentence(k, data){
   return {chosen, blanked};
 }
 
-// 読み方のヒント（となえかたと同じ「くん優先・無ければおん」のロジック）
+// 読み方のヒント（くん優先・無ければおん）。
+// 「ここの・ここのつ」のように候補が複数あるとき、例文で使われているのが
+// どれか（送りがなの有無など）まではデータから判別できないので、
+// 1つだけ選んで外すと文脈と食い違うことがある。安全のため候補は全部見せる。
 function primaryReading(data){
-  return data.kunyomi !== '—' ? data.kunyomi.split(/[・／]/)[0] : data.onyomi.split(/[・]/)[0];
+  return data.kunyomi !== '—' ? data.kunyomi : data.onyomi;
 }
 
 function render(keepInk){
