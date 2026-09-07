@@ -32,6 +32,12 @@
     min-height:100vh; display:flex; flex-direction:column; align-items:center;
     padding:24px 16px 60px;
   }
+  /* タブレットのタッチペンで書いているとき、範囲選択のハイライトが
+     出てしまわないように（コピー用の選択メニューやドラッグハンドル対策） */
+  *{
+    -webkit-user-select:none; user-select:none;
+    -webkit-touch-callout:none;
+  }
   .titlewrap{ text-align:center; margin-bottom:6px; }
   .titlewrap .kicker{ font-size:13px; letter-spacing:0.15em; color:var(--sumi-soft); margin-bottom:4px; }
   .titlewrap h1{
