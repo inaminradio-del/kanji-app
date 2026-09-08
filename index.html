@@ -539,6 +539,12 @@ function drawStage(){
   playToken++; // 表示を作り直すので、進行中の書き順アニメーションは打ち切る
   svg.innerHTML = '';
   playBadge.classList.remove('show');
+  // 何らかの理由で「書いている途中」の状態が残っていたら、ここで必ずリセットする
+  // （setPointerCaptureの失敗などで固まってしまうのを防ぐ安全策）
+  dragging = false;
+  activePointerId = null;
+  cachedRect = null;
+  curPathEl = null;
   const k = KEYS[idx];
   if(mode==='trace' || peeking){
     svg.insertAdjacentHTML('beforeend', guideMarkup(k));
@@ -808,11 +814,19 @@ let dragging = false;
 let curPathEl = null;
 let curD = ''; // 描いている途中のpath d属性（毎回全部組み直さず、末尾に足していく）
 let cachedRect = null; // ペンを置いている間は矩形を取り直さない（getBoundingClientRectは重いため）
+let activePointerId = null; // 今書いているペン/指のIDだけを追いかけ、手のひらなど他の接触は無視する
 
 svg.addEventListener('pointerdown', e=>{
+  if(dragging) return; // すでに書いている途中に、手のひら等の別の接触で乗っ取られないように
   e.preventDefault(); // スマホでここから画面がスクロール/フリックしてしまうのを防ぐ
   dragging = true;
-  svg.setPointerCapture(e.pointerId); // 指がマス目の外にはみ出しても描画を続けられるように
+  activePointerId = e.pointerId;
+  try{
+    svg.setPointerCapture(e.pointerId); // 指がマス目の外にはみ出しても描画を続けられるように
+  }catch(err){
+    // 端末やブラウザによっては失敗することがある。失敗しても描画自体は続行する
+    // （その場合、マス目の外にはみ出すと続きが取れなくなるだけで済むようにする）。
+  }
   cachedRect = svg.getBoundingClientRect();
   const p = svgPoint(e);
   curD = `M ${p.x} ${p.y}`;
@@ -827,7 +841,7 @@ svg.addEventListener('pointerdown', e=>{
   svg.appendChild(curPathEl);
 });
 svg.addEventListener('pointermove', e=>{
-  if(!dragging) return;
+  if(!dragging || e.pointerId !== activePointerId) return;
   e.preventDefault();
   // 高頻度端末だとpointermoveの間にたまった分もまとめて拾う
   const events = (typeof e.getCoalescedEvents === 'function') ? e.getCoalescedEvents() : [e];
@@ -837,12 +851,15 @@ svg.addEventListener('pointermove', e=>{
   });
   curPathEl.setAttribute('d', curD);
 });
-window.addEventListener('pointerup', (e)=>{
-  if(!dragging) return;
+function endStroke(e){
+  if(!dragging || e.pointerId !== activePointerId) return;
   dragging = false;
+  activePointerId = null;
   cachedRect = null;
   if(curPathEl) inkBackup.push(curD);
-});
+}
+window.addEventListener('pointerup', endStroke);
+window.addEventListener('pointercancel', endStroke); // OS側のパームリジェクション等で強制終了された場合
 
 function svgPoint(evt){
   const rect = cachedRect || svg.getBoundingClientRect();
