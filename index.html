@@ -840,7 +840,10 @@ svg.addEventListener('pointerdown', e=>{
   curPathEl.setAttribute('d', curD);
   svg.appendChild(curPathEl);
 });
-svg.addEventListener('pointermove', e=>{
+// pointermoveはsvgではなくwindowで拾う。setPointerCaptureが失敗した場合や、
+// 画数の多い字ですばやく書いていてペン先が一瞬マス目の外に出た場合でも、
+// ネイティブのキャプチャに頼らず自前でずっと追い続けられるようにするため。
+window.addEventListener('pointermove', e=>{
   if(!dragging || e.pointerId !== activePointerId) return;
   e.preventDefault();
   // 高頻度端末だとpointermoveの間にたまった分もまとめて拾う
