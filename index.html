@@ -806,13 +806,16 @@ btnWatchStroke.onclick = playStrokeOrder;
 // --- 自由に書く（判定なし、練習スペース） ---
 let dragging = false;
 let curPathEl = null;
-let curPoints = [];
+let curD = ''; // 描いている途中のpath d属性（毎回全部組み直さず、末尾に足していく）
+let cachedRect = null; // ペンを置いている間は矩形を取り直さない（getBoundingClientRectは重いため）
 
 svg.addEventListener('pointerdown', e=>{
   e.preventDefault(); // スマホでここから画面がスクロール/フリックしてしまうのを防ぐ
   dragging = true;
   svg.setPointerCapture(e.pointerId); // 指がマス目の外にはみ出しても描画を続けられるように
-  curPoints = [svgPoint(e)];
+  cachedRect = svg.getBoundingClientRect();
+  const p = svgPoint(e);
+  curD = `M ${p.x} ${p.y}`;
   curPathEl = document.createElementNS('http://www.w3.org/2000/svg','path');
   curPathEl.setAttribute('class','inkpath');
   curPathEl.setAttribute('stroke', '#2E2B27');
@@ -820,22 +823,29 @@ svg.addEventListener('pointerdown', e=>{
   curPathEl.setAttribute('fill', 'none');
   curPathEl.setAttribute('stroke-linecap', 'round');
   curPathEl.setAttribute('stroke-linejoin', 'round');
+  curPathEl.setAttribute('d', curD);
   svg.appendChild(curPathEl);
 });
 svg.addEventListener('pointermove', e=>{
   if(!dragging) return;
   e.preventDefault();
-  curPoints.push(svgPoint(e));
-  curPathEl.setAttribute('d', 'M ' + curPoints.map(p=>`${p.x} ${p.y}`).join(' L '));
+  // 高頻度端末だとpointermoveの間にたまった分もまとめて拾う
+  const events = (typeof e.getCoalescedEvents === 'function') ? e.getCoalescedEvents() : [e];
+  (events.length ? events : [e]).forEach(ev=>{
+    const p = svgPoint(ev);
+    curD += ` L ${p.x} ${p.y}`;
+  });
+  curPathEl.setAttribute('d', curD);
 });
 window.addEventListener('pointerup', (e)=>{
   if(!dragging) return;
   dragging = false;
-  if(curPathEl) inkBackup.push(curPathEl.getAttribute('d'));
+  cachedRect = null;
+  if(curPathEl) inkBackup.push(curD);
 });
 
 function svgPoint(evt){
-  const rect = svg.getBoundingClientRect();
+  const rect = cachedRect || svg.getBoundingClientRect();
   const x = (evt.clientX - rect.left) / rect.width * 280;
   const y = (evt.clientY - rect.top) / rect.height * 280;
   return {x,y};
