@@ -34,17 +34,12 @@
   }
   /* タブレットのタッチペンで書いているとき、範囲選択のハイライトが
      出てしまわないように（コピー用の選択メニューやドラッグハンドル対策）。
-     ただし書くマス目（.gridwrap svg）はtouch-action:noneとpreventDefault側で
-     すでに防止しているので、ここには掛けない（掛けるとペンの反応が
-     悪くなる端末があったため、範囲をそれ以外のUIだけに絞っている）。 */
-  body{
+     以前は書くマス目だけこれを外していたが、反応の悪さの本当の原因は
+     別（setPointerCaptureの例外処理もれ）だったと判明して直したため、
+     マス目を含めページ全体に掛け直す。 */
+  body, body *{
     -webkit-user-select:none; user-select:none;
     -webkit-touch-callout:none;
-  }
-  /* user-selectは継承されるため、書くマス目には明示的に打ち消しておく */
-  .gridwrap, .gridwrap *{
-    -webkit-user-select:auto; user-select:auto;
-    -webkit-touch-callout:default;
   }
   .titlewrap{ text-align:center; margin-bottom:6px; }
   .titlewrap .kicker{ font-size:13px; letter-spacing:0.15em; color:var(--sumi-soft); margin-bottom:4px; }
