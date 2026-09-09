@@ -810,11 +810,24 @@ let curPathEl = null;
 let curD = ''; // 描いている途中のpath d属性（毎回全部組み直さず、末尾に足していく）
 let cachedRect = null; // ペンを置いている間は矩形を取り直さない（getBoundingClientRectは重いため）
 let activePointerId = null; // 今書いているペン/指のIDだけを追いかけ、手のひらなど他の接触は無視する
+let strokeStartTime = 0; // dragging=trueになった時刻。pointerup/pointercancelが
+// 何らかの理由で届かず(端末やブラウザの取りこぼし)ずっとtrueのまま固まってしまうと、
+// 以降のpointerdownが永久に無視され「反応しない」状態になってしまう。
+// 一定時間経ってもdraggingがtrueのままなら、前のストロークは終わったとみなして
+// 自動的に復帰させる(パームリジェクションは残しつつ、固まりっぱなしは防ぐ)。
+const STUCK_STROKE_MS = 3000;
 
 svg.addEventListener('pointerdown', e=>{
-  if(dragging) return; // すでに書いている途中に、手のひら等の別の接触で乗っ取られないように
+  if(dragging){
+    if(performance.now() - strokeStartTime > STUCK_STROKE_MS){
+      dragging = false; // 前のストロークが固まっていた形跡。諦めて新規受付に切り替える
+    } else {
+      return; // すでに書いている途中に、手のひら等の別の接触で乗っ取られないように
+    }
+  }
   e.preventDefault(); // スマホでここから画面がスクロール/フリックしてしまうのを防ぐ
   dragging = true;
+  strokeStartTime = performance.now();
   activePointerId = e.pointerId;
   try{
     svg.setPointerCapture(e.pointerId); // 指がマス目の外にはみ出しても描画を続けられるように
