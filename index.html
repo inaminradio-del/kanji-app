@@ -838,6 +838,11 @@ svg.addEventListener('pointerdown', e=>{
 // pointermoveはsvgではなくwindowで拾う。setPointerCaptureが失敗した場合や、
 // 画数の多い字ですばやく書いていてペン先が一瞬マス目の外に出た場合でも、
 // ネイティブのキャプチャに頼らず自前でずっと追い続けられるようにするため。
+let drawRafPending = false; // 点の記録(軽い)とSVGへの反映(重い)を分け、
+// 反映はフレームに1回にまとめる。画数が多い字をすばやく書くと、
+// setAttribute(layout再計算)が高頻度端末で追いつかずメインスレッドが
+// 詰まり、その間に来たpointermoveの処理が遅延して「反応漏れ」に
+// 見えることがあるため。点の記録自体は即座に行うので取りこぼしはない。
 window.addEventListener('pointermove', e=>{
   if(!dragging || e.pointerId !== activePointerId) return;
   e.preventDefault();
@@ -847,14 +852,23 @@ window.addEventListener('pointermove', e=>{
     const p = svgPoint(ev);
     curD += ` L ${p.x} ${p.y}`;
   });
-  curPathEl.setAttribute('d', curD);
+  if(!drawRafPending){
+    drawRafPending = true;
+    requestAnimationFrame(()=>{
+      drawRafPending = false;
+      if(curPathEl) curPathEl.setAttribute('d', curD);
+    });
+  }
 });
 function endStroke(e){
   if(!dragging || e.pointerId !== activePointerId) return;
   dragging = false;
   activePointerId = null;
   cachedRect = null;
-  if(curPathEl) inkBackup.push(curD);
+  if(curPathEl){
+    curPathEl.setAttribute('d', curD); // rAF待ちの反映漏れがないよう最後に確定反映
+    inkBackup.push(curD);
+  }
 }
 window.addEventListener('pointerup', endStroke);
 window.addEventListener('pointercancel', endStroke); // OS側のパームリジェクション等で強制終了された場合
