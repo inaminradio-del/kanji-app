@@ -195,7 +195,11 @@
     background:#fff; border:1.5px solid var(--accent); transition:border-color .2s;
     touch-action:none; overscroll-behavior:contain;
   }
-  .gridwrap svg{ position:absolute; top:0; left:0; width:100%; height:100%; touch-action:none; cursor:crosshair; }
+  /* 手本の文字ガイドと、○つけなどの演出は、下と上でそれぞれ独立したsvgに分けている
+     （書いているインクはcanvasに描くため、演出はさらにその上に乗る必要がある）。
+     どちらも表示専用でペンには反応させない。 */
+  .gridwrap svg{ position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
+  .gridwrap canvas{ position:absolute; top:0; left:0; width:100%; height:100%; touch-action:none; cursor:crosshair; }
   .cross-h, .cross-v{ position:absolute; background:var(--guide); opacity:.55; }
   .cross-h{ top:50%; left:0; width:100%; height:1px; transform:translateY(-0.5px); }
   .cross-v{ left:50%; top:0; width:1px; height:100%; transform:translateX(-0.5px); }
@@ -327,6 +331,8 @@
       <div class="cross-v"></div>
       <div class="diag"></div>
       <svg id="svgStage" viewBox="0 0 280 280"></svg>
+      <canvas id="inkCanvas"></canvas>
+      <svg id="overlaySvg" viewBox="0 0 280 280"></svg>
       <div class="playBadge" id="playBadge"></div>
     </div>
     <div class="strokeBadge" id="strokeBadge"></div>
@@ -409,7 +415,10 @@ select.onchange = () => { idx = KEYS.indexOf(select.value); render(); };
 document.getElementById('prevBtn').onclick = () => { idx = (idx-1+KEYS.length)%KEYS.length; render(); };
 document.getElementById('nextBtn').onclick = () => { idx = (idx+1)%KEYS.length; render(); };
 
-const svg = document.getElementById('svgStage');
+const svg = document.getElementById('svgStage'); // 手本のガイド表示専用（下段）
+const inkCanvas = document.getElementById('inkCanvas'); // 自分で書くインクはここに描く
+const inkCtx = inkCanvas.getContext('2d');
+const overlaySvg = document.getElementById('overlaySvg'); // 書き順アニメーションや○つけなど、インクの上に乗せる演出専用（上段）
 const msg = document.getElementById('msg');
 const guideNote = document.getElementById('guideNote');
 const strokeBadge = document.getElementById('strokeBadge');
@@ -533,35 +542,49 @@ function guideMarkup(k){
 function drawStage(){
   playToken++; // 表示を作り直すので、進行中の書き順アニメーションは打ち切る
   svg.innerHTML = '';
+  overlaySvg.innerHTML = '';
   playBadge.classList.remove('show');
   // 何らかの理由で「書いている途中」の状態が残っていたら、ここで必ずリセットする
   // （setPointerCaptureの失敗などで固まってしまうのを防ぐ安全策）
   dragging = false;
   activePointerId = null;
   cachedRect = null;
-  curPathEl = null;
+  lastPt = null;
   const k = KEYS[idx];
   if(mode==='trace' || peeking){
     svg.insertAdjacentHTML('beforeend', guideMarkup(k));
   }
-  reAttachInk();
+  redrawInkCanvas();
 }
+
+// canvasの実ピクセル数を表示サイズ×画面密度に合わせ直す（ぼやけ防止）。
+// canvasは大きさを変えると中身が消えるため、その直後に必ずinkBackupから描き直す。
+function sizeInkCanvas(){
+  const rect = inkCanvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  inkCanvas.width = Math.max(1, Math.round(rect.width * dpr));
+  inkCanvas.height = Math.max(1, Math.round(rect.height * dpr));
+  // 描画側は今まで通り0〜280の座標系のまま書けるように変換を仕込んでおく
+  inkCtx.setTransform(inkCanvas.width/280, 0, 0, inkCanvas.height/280, 0, 0);
+  inkCtx.lineWidth = 6; inkCtx.lineCap = 'round'; inkCtx.lineJoin = 'round'; inkCtx.strokeStyle = '#2E2B27';
+  return rect;
+}
+function redrawInkCanvas(){
+  cachedRect = sizeInkCanvas();
+  inkCtx.clearRect(0, 0, 280, 280);
+  inkBackup.forEach(d => { try{ inkCtx.stroke(new Path2D(d)); }catch(e){} });
+}
+window.addEventListener('resize', redrawInkCanvas); // タブレットの回転などでずれないように
 
 function clearInk(){
   inkBackup = [];
-  [...svg.querySelectorAll('.inkpath')].forEach(p=>p.remove());
+  inkCtx.clearRect(0, 0, 280, 280);
 }
 btnClear.onclick = () => { clearInk(); msg.textContent=''; msg.className='msg'; };
 
 btnPeek.onmousedown = () => { peeking = true; drawStage(); };
 btnPeek.onmouseup = btnPeek.onmouseleave = btnPeek.ontouchend = () => { peeking = false; drawStage(); };
 btnPeek.ontouchstart = (e)=>{ e.preventDefault(); peeking = true; drawStage(); };
-
-function reAttachInk(){
-  inkBackup.forEach(d=>{
-    svg.insertAdjacentHTML('beforeend', `<path d="${d}" class="inkpath" stroke="#2E2B27" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`);
-  });
-}
 
 // --- 見本とだいたい合っているかの判定 ---
 // KanjiVGの正解パスと、自分で書いたインクをそれぞれ小さなキャンバスに焼きつけて、
@@ -645,7 +668,7 @@ function drawCorrectMark(){
   const rx = Math.max((maxX-minX)/2 + pad, 46);
   const ry = Math.max((maxY-minY)/2 + pad, 46);
 
-  const old = svg.querySelector('.correctMark');
+  const old = overlaySvg.querySelector('.correctMark');
   if(old) old.remove();
 
   const ellipse = document.createElementNS(SVGNS, 'ellipse');
@@ -654,7 +677,7 @@ function drawCorrectMark(){
   ellipse.setAttribute('cy', cy);
   ellipse.setAttribute('rx', rx);
   ellipse.setAttribute('ry', ry);
-  svg.appendChild(ellipse);
+  overlaySvg.appendChild(ellipse);
 
   const len = ellipse.getTotalLength();
   ellipse.style.strokeDasharray = String(len);
@@ -723,13 +746,13 @@ function playStrokeOrder(){
   playToken++;
   const myToken = playToken;
 
-  const old = svg.querySelector('.kvgPlay');
+  const old = overlaySvg.querySelector('.kvgPlay');
   if(old) old.remove();
 
   const g = document.createElementNS(SVGNS, 'g');
   g.setAttribute('class', 'kvgPlay');
   g.setAttribute('transform', `scale(${KVG_SCALE})`);
-  svg.appendChild(g);
+  overlaySvg.appendChild(g);
 
   const pathEls = strokes.map(d=>{
     const p = document.createElementNS(SVGNS, 'path');
@@ -805,9 +828,17 @@ function playStrokeOrder(){
 btnWatchStroke.onclick = playStrokeOrder;
 
 // --- 自由に書く（判定なし、練習スペース） ---
+// インクはSVGではなくcanvasに描く。SVGは点を打つたびに'd'属性まるごとを
+// 再パース・再レイアウトする必要があり、画数が多い字で線がすでにたくさん
+// あるとその再計算が重くなってメインスレッドが詰まり、その間に届いた
+// pointermoveの処理が遅れて「反応漏れ」に見えていた。canvasなら1点ごとに
+// 短い線分を足し描きするだけで済み、既存の線の量に関係なく毎回一定の
+// 軽さで済む（メモ帳アプリなどが単純な描画でもすらすら書けるのと同じ理由）。
+// なお判定(computeMatchScore)用にはSVGのpath 'd'属性と同じ文字列を今まで
+// 通りinkBackupに保存しておき、Path2Dでcanvasに焼き直せるようにしている。
 let dragging = false;
-let curPathEl = null;
-let curD = ''; // 描いている途中のpath d属性（毎回全部組み直さず、末尾に足していく）
+let curD = ''; // 描いている途中のpath d属性（判定・保存用。毎回全部組み直さず、末尾に足していく）
+let lastPt = null; // canvasに線分を足し描きするための直前の点
 let cachedRect = null; // ペンを置いている間は矩形を取り直さない（getBoundingClientRectは重いため）
 let activePointerId = null; // 今書いているペン/指のIDだけを追いかけ、手のひらなど他の接触は無視する
 let strokeStartTime = 0; // dragging=trueになった時刻。pointerup/pointercancelが
@@ -817,7 +848,7 @@ let strokeStartTime = 0; // dragging=trueになった時刻。pointerup/pointerc
 // 自動的に復帰させる(パームリジェクションは残しつつ、固まりっぱなしは防ぐ)。
 const STUCK_STROKE_MS = 3000;
 
-svg.addEventListener('pointerdown', e=>{
+inkCanvas.addEventListener('pointerdown', e=>{
   if(dragging){
     if(performance.now() - strokeStartTime > STUCK_STROKE_MS){
       dragging = false; // 前のストロークが固まっていた形跡。諦めて新規受付に切り替える
@@ -830,32 +861,19 @@ svg.addEventListener('pointerdown', e=>{
   strokeStartTime = performance.now();
   activePointerId = e.pointerId;
   try{
-    svg.setPointerCapture(e.pointerId); // 指がマス目の外にはみ出しても描画を続けられるように
+    inkCanvas.setPointerCapture(e.pointerId); // 指がマス目の外にはみ出しても描画を続けられるように
   }catch(err){
     // 端末やブラウザによっては失敗することがある。失敗しても描画自体は続行する
     // （その場合、マス目の外にはみ出すと続きが取れなくなるだけで済むようにする）。
   }
-  cachedRect = svg.getBoundingClientRect();
+  cachedRect = inkCanvas.getBoundingClientRect();
   const p = svgPoint(e);
   curD = `M ${p.x} ${p.y}`;
-  curPathEl = document.createElementNS('http://www.w3.org/2000/svg','path');
-  curPathEl.setAttribute('class','inkpath');
-  curPathEl.setAttribute('stroke', '#2E2B27');
-  curPathEl.setAttribute('stroke-width', '6');
-  curPathEl.setAttribute('fill', 'none');
-  curPathEl.setAttribute('stroke-linecap', 'round');
-  curPathEl.setAttribute('stroke-linejoin', 'round');
-  curPathEl.setAttribute('d', curD);
-  svg.appendChild(curPathEl);
+  lastPt = p;
 });
-// pointermoveはsvgではなくwindowで拾う。setPointerCaptureが失敗した場合や、
+// pointermoveはinkCanvasではなくwindowで拾う。setPointerCaptureが失敗した場合や、
 // 画数の多い字ですばやく書いていてペン先が一瞬マス目の外に出た場合でも、
 // ネイティブのキャプチャに頼らず自前でずっと追い続けられるようにするため。
-let drawRafPending = false; // 点の記録(軽い)とSVGへの反映(重い)を分け、
-// 反映はフレームに1回にまとめる。画数が多い字をすばやく書くと、
-// setAttribute(layout再計算)が高頻度端末で追いつかずメインスレッドが
-// 詰まり、その間に来たpointermoveの処理が遅延して「反応漏れ」に
-// 見えることがあるため。点の記録自体は即座に行うので取りこぼしはない。
 window.addEventListener('pointermove', e=>{
   if(!dragging || e.pointerId !== activePointerId) return;
   e.preventDefault();
@@ -864,30 +882,26 @@ window.addEventListener('pointermove', e=>{
   (events.length ? events : [e]).forEach(ev=>{
     const p = svgPoint(ev);
     curD += ` L ${p.x} ${p.y}`;
+    inkCtx.beginPath();
+    inkCtx.moveTo(lastPt.x, lastPt.y);
+    inkCtx.lineTo(p.x, p.y);
+    inkCtx.stroke();
+    lastPt = p;
   });
-  if(!drawRafPending){
-    drawRafPending = true;
-    requestAnimationFrame(()=>{
-      drawRafPending = false;
-      if(curPathEl) curPathEl.setAttribute('d', curD);
-    });
-  }
 });
 function endStroke(e){
   if(!dragging || e.pointerId !== activePointerId) return;
   dragging = false;
   activePointerId = null;
   cachedRect = null;
-  if(curPathEl){
-    curPathEl.setAttribute('d', curD); // rAF待ちの反映漏れがないよう最後に確定反映
-    inkBackup.push(curD);
-  }
+  lastPt = null;
+  if(curD) inkBackup.push(curD);
 }
 window.addEventListener('pointerup', endStroke);
 window.addEventListener('pointercancel', endStroke); // OS側のパームリジェクション等で強制終了された場合
 
 function svgPoint(evt){
-  const rect = cachedRect || svg.getBoundingClientRect();
+  const rect = cachedRect || inkCanvas.getBoundingClientRect();
   const x = (evt.clientX - rect.left) / rect.width * 280;
   const y = (evt.clientY - rect.top) / rect.height * 280;
   return {x,y};
