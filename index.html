@@ -839,7 +839,9 @@ btnWatchStroke.onclick = playStrokeOrder;
 // 通りinkBackupに保存しておき、Path2Dでcanvasに焼き直せるようにしている。
 let dragging = false;
 let curD = ''; // 描いている途中のpath d属性（判定・保存用。毎回全部組み直さず、末尾に足していく）
-let lastPt = null; // canvasに線分を足し描きするための直前の点
+let lastPt = null; // curD組み立て用の直前の点
+let smoothPrev = null; // 滑らか描画用：直前に受け取った点
+let smoothMid = null; // 滑らか描画用：ひとつ前の区間の終点(=中点)。ここから曲線を引く
 let cachedRect = null; // ペンを置いている間は矩形を取り直さない（getBoundingClientRectは重いため）
 let activePointerId = null; // 今書いているペン/指のIDだけを追いかけ、手のひらなど他の接触は無視する
 let activePointerType = null; // 'pen' / 'touch' / 'mouse'。手のひらか同じペンかの見分けに使う
@@ -879,6 +881,8 @@ inkCanvas.addEventListener('pointerdown', e=>{
   const p = svgPoint(e);
   curD = `M ${p.x} ${p.y}`;
   lastPt = p;
+  smoothPrev = p;
+  smoothMid = p;
 });
 // pointermoveはinkCanvasではなくwindowで拾う。setPointerCaptureが失敗した場合や、
 // 画数の多い字ですばやく書いていてペン先が一瞬マス目の外に出た場合でも、
@@ -887,14 +891,22 @@ window.addEventListener('pointermove', e=>{
   if(!dragging || e.pointerId !== activePointerId) return;
   e.preventDefault();
   // 高頻度端末だとpointermoveの間にたまった分もまとめて拾う
+  // （Safari/iPhoneはこれに対応していない/間隔が広いことがあり、点と点を
+  //   直線でつなぐとカクカクした線になってしまうため、下で曲線化している）
   const events = (typeof e.getCoalescedEvents === 'function') ? e.getCoalescedEvents() : [e];
   (events.length ? events : [e]).forEach(ev=>{
     const p = svgPoint(ev);
     curD += ` L ${p.x} ${p.y}`;
+    // 点と点を直線でつなぐとカクカクして見えるので、直前2点の中点同士を
+    // 2次ベジェ曲線でつなぐ(お絵かきアプリの手ブレ補正で使われる定番の方法)。
+    // 点の間隔が広くても滑らかな曲線に見える。
+    const mid = {x:(smoothPrev.x+p.x)/2, y:(smoothPrev.y+p.y)/2};
     inkCtx.beginPath();
-    inkCtx.moveTo(lastPt.x, lastPt.y);
-    inkCtx.lineTo(p.x, p.y);
+    inkCtx.moveTo(smoothMid.x, smoothMid.y);
+    inkCtx.quadraticCurveTo(smoothPrev.x, smoothPrev.y, mid.x, mid.y);
     inkCtx.stroke();
+    smoothMid = mid;
+    smoothPrev = p;
     lastPt = p;
   });
 });
@@ -903,7 +915,17 @@ function endStroke(e){
   dragging = false;
   activePointerId = null;
   cachedRect = null;
+  // 曲線化のため最後の点は中点までしか届いていないので、ペンを離した
+  // 実際の位置まで最後にまっすぐ引いて仕上げる（線の先端が欠けないように）
+  if(smoothPrev && smoothMid){
+    inkCtx.beginPath();
+    inkCtx.moveTo(smoothMid.x, smoothMid.y);
+    inkCtx.lineTo(smoothPrev.x, smoothPrev.y);
+    inkCtx.stroke();
+  }
   lastPt = null;
+  smoothPrev = null;
+  smoothMid = null;
   if(curD) inkBackup.push(curD);
 }
 window.addEventListener('pointerup', endStroke);
