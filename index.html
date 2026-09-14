@@ -803,6 +803,9 @@ function playStrokeOrder(){
       penTip.style.display = 'none';
       playBadge.textContent = 'できた！';
       setTimeout(()=>{ if(myToken===playToken) playBadge.classList.remove('show'); }, 900);
+      // 書き順の見本(overlaySvg、インクより上のレイヤー)を出しっぱなしにすると、
+      // このあと自分で書いた字がその下に隠れてしまうので、少し見せたら消しておく。
+      setTimeout(()=>{ if(myToken===playToken && g.isConnected) g.remove(); }, 1200);
       msg.textContent = `「${k}」の　書き順だよ！`;
       msg.className = 'msg win';
       return;
@@ -873,6 +876,11 @@ inkCanvas.addEventListener('touchstart', e => e.preventDefault(), {passive:false
 inkCanvas.addEventListener('touchmove', e => e.preventDefault(), {passive:false});
 
 inkCanvas.addEventListener('pointerdown', e=>{
+  // 書き順の見本(overlaySvg)はインクより上のレイヤーなので、見終わった後の
+  // 見本が残ったまま書き始めると、自分の字がその下に隠れて見えなくなって
+  // しまう。自分で書き始めたら、その見本はもう用済みとして消しておく。
+  const leftoverPlay = overlaySvg.querySelector('.kvgPlay');
+  if(leftoverPlay) leftoverPlay.remove();
   if(dragging){
     // 同じペン(pointerType)からの新しいpointerdownなら、前のpointerupを
     // 取りこぼしただけとみなして即座に乗っ取る(手のひら等の別種の接触が
