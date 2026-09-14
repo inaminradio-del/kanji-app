@@ -548,6 +548,7 @@ function drawStage(){
   // （setPointerCaptureの失敗などで固まってしまうのを防ぐ安全策）
   dragging = false;
   activePointerId = null;
+  activePointerType = null;
   cachedRect = null;
   lastPt = null;
   const k = KEYS[idx];
@@ -841,6 +842,7 @@ let curD = ''; // 描いている途中のpath d属性（判定・保存用。�
 let lastPt = null; // canvasに線分を足し描きするための直前の点
 let cachedRect = null; // ペンを置いている間は矩形を取り直さない（getBoundingClientRectは重いため）
 let activePointerId = null; // 今書いているペン/指のIDだけを追いかけ、手のひらなど他の接触は無視する
+let activePointerType = null; // 'pen' / 'touch' / 'mouse'。手のひらか同じペンかの見分けに使う
 let strokeStartTime = 0; // dragging=trueになった時刻。pointerup/pointercancelが
 // 何らかの理由で届かず(端末やブラウザの取りこぼし)ずっとtrueのまま固まってしまうと、
 // 以降のpointerdownが永久に無視され「反応しない」状態になってしまう。
@@ -850,8 +852,14 @@ const STUCK_STROKE_MS = 3000;
 
 inkCanvas.addEventListener('pointerdown', e=>{
   if(dragging){
-    if(performance.now() - strokeStartTime > STUCK_STROKE_MS){
-      dragging = false; // 前のストロークが固まっていた形跡。諦めて新規受付に切り替える
+    // 同じペン(pointerType)からの新しいpointerdownなら、前のpointerupを
+    // 取りこぼしただけとみなして即座に乗っ取る(手のひら等の別種の接触が
+    // 割り込んできた場合だけ、これまで通り無視する)。
+    // これが無いと、pointerupの取りこぼし1回ごとに最大3秒間ペンが
+    // 反応しなくなってしまう。
+    const samePenContinuing = e.pointerType === activePointerType;
+    if(samePenContinuing || performance.now() - strokeStartTime > STUCK_STROKE_MS){
+      dragging = false; // 前のストロークは終わっていた/固まっていたとみなして、新規受付に切り替える
     } else {
       return; // すでに書いている途中に、手のひら等の別の接触で乗っ取られないように
     }
@@ -860,6 +868,7 @@ inkCanvas.addEventListener('pointerdown', e=>{
   dragging = true;
   strokeStartTime = performance.now();
   activePointerId = e.pointerId;
+  activePointerType = e.pointerType;
   try{
     inkCanvas.setPointerCapture(e.pointerId); // 指がマス目の外にはみ出しても描画を続けられるように
   }catch(err){
