@@ -864,6 +864,14 @@ const STUCK_STROKE_MS = 3000;
 inkCanvas.addEventListener('contextmenu', e => e.preventDefault());
 inkCanvas.addEventListener('dragstart', e => e.preventDefault());
 
+// iOS Safariは、方向転換のある速い指の動きを「スクロール/スワイプ
+// ジェスチャーかもしれない」と判定すると、pointercancelで強制的に
+// タッチを打ち切ってしまうことがある(touch-action:noneだけでは
+// 防ぎきれない端末がある)。生のtouchイベント側でも明示的にデフォルト
+// 動作を止めておくことで、iOS側にジェスチャー扱いさせないようにする。
+inkCanvas.addEventListener('touchstart', e => e.preventDefault(), {passive:false});
+inkCanvas.addEventListener('touchmove', e => e.preventDefault(), {passive:false});
+
 inkCanvas.addEventListener('pointerdown', e=>{
   if(dragging){
     // 同じペン(pointerType)からの新しいpointerdownなら、前のpointerupを
