@@ -199,7 +199,14 @@
      （書いているインクはcanvasに描くため、演出はさらにその上に乗る必要がある）。
      どちらも表示専用でペンには反応させない。 */
   .gridwrap svg{ position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
-  .gridwrap canvas{ position:absolute; top:0; left:0; width:100%; height:100%; touch-action:none; cursor:crosshair; }
+  .gridwrap canvas{
+    position:absolute; top:0; left:0; width:100%; height:100%; touch-action:none; cursor:crosshair;
+    /* iOSはcanvasを画像のように扱い、指で長押しすると共有/コピー用の
+       プレビュー(画像を長押しした時と同じ見た目)を出そうとすることがある。
+       -webkit-touch-calloutだけでは防ぎきれないため、ドラッグ開始自体も
+       明示的に禁止しておく。 */
+    -webkit-user-drag:none; user-drag:none;
+  }
   .cross-h, .cross-v{ position:absolute; background:var(--guide); opacity:.55; }
   .cross-h{ top:50%; left:0; width:100%; height:1px; transform:translateY(-0.5px); }
   .cross-v{ left:50%; top:0; width:1px; height:100%; transform:translateX(-0.5px); }
@@ -851,6 +858,11 @@ let strokeStartTime = 0; // dragging=trueになった時刻。pointerup/pointerc
 // 一定時間経ってもdraggingがtrueのままなら、前のストロークは終わったとみなして
 // 自動的に復帰させる(パームリジェクションは残しつつ、固まりっぱなしは防ぐ)。
 const STUCK_STROKE_MS = 3000;
+
+// iOSがcanvasを画像扱いして長押しで共有/コピーメニューやドラッグを
+// 始めようとするのを念のため確実に止めておく(CSSだけでは防ぎきれない端末対策)。
+inkCanvas.addEventListener('contextmenu', e => e.preventDefault());
+inkCanvas.addEventListener('dragstart', e => e.preventDefault());
 
 inkCanvas.addEventListener('pointerdown', e=>{
   if(dragging){
