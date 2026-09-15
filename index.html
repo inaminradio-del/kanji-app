@@ -512,8 +512,15 @@ function render(keepInk){
     document.getElementById('challengeYomi').innerHTML = `よみ方：<b>${primaryReading(data)}</b>`;
   }
 
+  // チャレンジモードでは、答えの漢字を□に隠しているのに画数を教えてしまうと
+  // 「この画数ならこれだ！」と字の形を思い出さずに当ててしまえるヒントに
+  // なってしまうので、画数まわりの表示は隠す（練習モードでは、
+  // 見ながら/見ないでどちらでも漢字そのものは他の場所に出ているので、
+  // 画数を教えても答えのネタバレにはならず問題ない）。
   const strokeN = (STROKES[k] && STROKES[k].length) || data.strokeCount;
   strokeBadge.innerHTML = `この字は <b>${strokeN}画</b> だよ`;
+  strokeBadge.style.display = isChallenge ? 'none' : 'block';
+  btnPlayStroke.style.display = isChallenge ? 'none' : 'inline-block';
   btnPeek.style.display = mode==='free' ? 'inline-block' : 'none';
   guideNote.textContent = isChallenge
     ? '□に入る漢字を考えて、書いてみよう。わからないときは「ちらっと見る」でかくにんできるよ。'
@@ -754,7 +761,9 @@ function playStrokeOrder(){
   playToken++;
   const myToken = playToken;
 
-  const old = overlaySvg.querySelector('.kvgPlay');
+  // 再生し終わった見本は下のガイド層(svg)に移されるので、そちらも含めて
+  // 古い見本があれば消しておく（そうしないと再生し直すたびに見本が重なって残る）。
+  const old = svg.querySelector('.kvgPlay') || overlaySvg.querySelector('.kvgPlay');
   if(old) old.remove();
 
   const g = document.createElementNS(SVGNS, 'g');
@@ -803,9 +812,12 @@ function playStrokeOrder(){
       penTip.style.display = 'none';
       playBadge.textContent = 'できた！';
       setTimeout(()=>{ if(myToken===playToken) playBadge.classList.remove('show'); }, 900);
-      // 書き順の見本(overlaySvg、インクより上のレイヤー)を出しっぱなしにすると、
-      // このあと自分で書いた字がその下に隠れてしまうので、少し見せたら消しておく。
-      setTimeout(()=>{ if(myToken===playToken && g.isConnected) g.remove(); }, 1200);
+      // 再生し終わった見本はそのまま残して、なぞりながら書く練習に使えるように
+      // しておく。ただしoverlaySvgはインクより上のレイヤーなので、そのままだと
+      // このあと自分で書いた字が見本の下に隠れてしまう。見本をガイド用のsvg
+      // (インクより下のレイヤー)に移してしまうことで、自分のインクが常に
+      // ちゃんと上に見えるようにする。
+      if(g.isConnected) svg.appendChild(g);
       msg.textContent = `「${k}」の　書き順だよ！`;
       msg.className = 'msg win';
       return;
@@ -876,11 +888,6 @@ inkCanvas.addEventListener('touchstart', e => e.preventDefault(), {passive:false
 inkCanvas.addEventListener('touchmove', e => e.preventDefault(), {passive:false});
 
 inkCanvas.addEventListener('pointerdown', e=>{
-  // 書き順の見本(overlaySvg)はインクより上のレイヤーなので、見終わった後の
-  // 見本が残ったまま書き始めると、自分の字がその下に隠れて見えなくなって
-  // しまう。自分で書き始めたら、その見本はもう用済みとして消しておく。
-  const leftoverPlay = overlaySvg.querySelector('.kvgPlay');
-  if(leftoverPlay) leftoverPlay.remove();
   if(dragging){
     // 同じペン(pointerType)からの新しいpointerdownなら、前のpointerupを
     // 取りこぼしただけとみなして即座に乗っ取る(手のひら等の別種の接触が
