@@ -512,15 +512,14 @@ function render(keepInk){
     document.getElementById('challengeYomi').innerHTML = `よみ方：<b>${primaryReading(data)}</b>`;
   }
 
-  // チャレンジモードでは、答えの漢字を□に隠しているのに画数を教えてしまうと
-  // 「この画数ならこれだ！」と字の形を思い出さずに当ててしまえるヒントに
-  // なってしまうので、画数まわりの表示は隠す（練習モードでは、
-  // 見ながら/見ないでどちらでも漢字そのものは他の場所に出ているので、
-  // 画数を教えても答えのネタバレにはならず問題ない）。
+  // 画数バッジ・「画数をきく」ボタンはどちらも非表示にしている。
+  // チャレンジモードでは答えの漢字が□に隠れているのに画数がヒントになって
+  // しまうし、練習モードでも画数を数字で教えてしまうと「これで合ってるかな」を
+  // 字の形ではなく数合わせで確認できてしまうため。
   const strokeN = (STROKES[k] && STROKES[k].length) || data.strokeCount;
   strokeBadge.innerHTML = `この字は <b>${strokeN}画</b> だよ`;
-  strokeBadge.style.display = isChallenge ? 'none' : 'block';
-  btnPlayStroke.style.display = isChallenge ? 'none' : 'inline-block';
+  strokeBadge.style.display = 'none';
+  btnPlayStroke.style.display = 'none';
   btnPeek.style.display = mode==='free' ? 'inline-block' : 'none';
   guideNote.textContent = isChallenge
     ? '□に入る漢字を考えて、書いてみよう。わからないときは「ちらっと見る」でかくにんできるよ。'
